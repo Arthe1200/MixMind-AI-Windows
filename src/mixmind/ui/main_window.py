@@ -354,7 +354,7 @@ class MainWindow(QMainWindow):
             shortcut = QShortcut(QKeySequence(sequence), self)
             shortcut.activated.connect(callback)
 
-    def closeEvent(self, event) -> None:  # noqa: N802 - Qt API naming
+    def closeEvent(self, event) -> None:
         self.settings.setValue("geometry", self.saveGeometry())
         super().closeEvent(event)
 
