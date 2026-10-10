@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import base64
+import json
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, QUrl
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import QByteArray, QSettings, Qt, QUrl, QUrlQuery
+from PySide6.QtGui import QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QTabWidget,
     QDoubleSpinBox,
     QFileDialog,
     QFrame,
@@ -207,6 +215,7 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
         self.setMinimumSize(1050, 720)
         self.settings = QSettings("MixMind AI", "MixMind")
+        self.network = QNetworkAccessManager(self)
         self._shuffle = False
         self._repeat = False
 
@@ -278,20 +287,58 @@ class MainWindow(QMainWindow):
         library_panel = QFrame()
         library_panel.setObjectName("libraryPanel")
         library_layout = QVBoxLayout(library_panel)
+        self.library_tabs = QTabWidget()
+        local_tab = QWidget()
+        local_layout = QVBoxLayout(local_tab)
         library_heading = QLabel("MUSIC LIBRARY")
         library_heading.setObjectName("sectionTitle")
-        library_layout.addWidget(library_heading)
-        library_layout.addWidget(self.search)
+        local_layout.addWidget(library_heading)
+        local_layout.addWidget(self.search)
         library_actions = QHBoxLayout()
         library_actions.addWidget(import_button)
         library_actions.addWidget(folder_button)
         library_actions.addWidget(remove_button)
-        library_layout.addLayout(library_actions)
-        library_layout.addWidget(self.library, 1)
-        hint = QLabel("Double-clique un titre pour le charger sur A. Utilise les boutons de chaque platine pour charger A ou B.")
+        local_layout.addLayout(library_actions)
+        local_layout.addWidget(self.library, 1)
+        hint = QLabel("Double-clique un titre pour le charger sur A. Les plateformes servent à rechercher le catalogue et ouvrir le titre officiel ; leur flux protégé n'est pas injecté dans les platines.")
         hint.setObjectName("hint")
         hint.setWordWrap(True)
-        library_layout.addWidget(hint)
+        local_layout.addWidget(hint)
+        self.library_tabs.addTab(local_tab, "Fichiers locaux")
+
+        platforms_tab = QWidget()
+        platforms_layout = QVBoxLayout(platforms_tab)
+        platform_heading = QLabel("PLATEFORMES MUSICALES")
+        platform_heading.setObjectName("sectionTitle")
+        platforms_layout.addWidget(platform_heading)
+        platform_info = QLabel("Recherche dans les catalogues officiels. Les identifiants API nécessaires se configurent ci-dessous. La lecture DJ reste réservée aux fichiers audio locaux auxquels tu as légalement accès.")
+        platform_info.setWordWrap(True)
+        platform_info.setObjectName("hint")
+        platforms_layout.addWidget(platform_info)
+        platform_controls = QHBoxLayout()
+        self.platform_combo = QComboBox()
+        self.platform_combo.addItems(["Deezer", "Spotify", "Apple Music", "YouTube Music"])
+        self.platform_query = QLineEdit()
+        self.platform_query.setPlaceholderText("Titre, artiste ou album…")
+        self.platform_query.returnPressed.connect(self._search_platform)
+        search_platform_button = QPushButton("Rechercher")
+        search_platform_button.clicked.connect(self._search_platform)
+        credentials_button = QPushButton("Configurer les API")
+        credentials_button.clicked.connect(self._configure_platform_credentials)
+        platform_controls.addWidget(self.platform_combo)
+        platform_controls.addWidget(self.platform_query, 1)
+        platform_controls.addWidget(search_platform_button)
+        platform_controls.addWidget(credentials_button)
+        platforms_layout.addLayout(platform_controls)
+        self.music_results = QListWidget()
+        self.music_results.setObjectName("musicResults")
+        self.music_results.itemDoubleClicked.connect(self._open_platform_result)
+        platforms_layout.addWidget(self.music_results, 1)
+        open_result_button = QPushButton("Ouvrir le titre sélectionné sur la plateforme")
+        open_result_button.clicked.connect(self._open_platform_result)
+        platforms_layout.addWidget(open_result_button)
+        self.library_tabs.addTab(platforms_tab, "Plateformes")
+        library_layout.addWidget(self.library_tabs)
 
         content = QVBoxLayout()
         top = QHBoxLayout()
@@ -320,9 +367,12 @@ class MainWindow(QMainWindow):
                 background: #151821; border: 1px solid #2a2e3b; border-radius: 12px;
             }
             QFrame#deckPanel { padding: 7px; }
-            QLineEdit, QListWidget, QDoubleSpinBox {
+            QLineEdit, QListWidget, QDoubleSpinBox, QComboBox {
                 background: #0e1118; border: 1px solid #303546; border-radius: 7px; padding: 8px;
             }
+            QTabWidget::pane { border: 1px solid #2a2e3b; border-radius: 8px; }
+            QTabBar::tab { background: #171b25; padding: 8px 14px; margin-right: 4px; border-radius: 6px; }
+            QTabBar::tab:selected { background: #39314f; }
             QListWidget::item { padding: 8px; border-radius: 5px; }
             QListWidget::item:selected { background: #39314f; color: #fff; }
             QPushButton {
@@ -342,6 +392,164 @@ class MainWindow(QMainWindow):
         if geometry:
             self.restoreGeometry(geometry)
         self.update_crossfade()
+
+    def _configure_platform_credentials(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Configuration des plateformes musicales")
+        dialog.resize(560, 320)
+        layout = QVBoxLayout(dialog)
+        note = QLabel("Les clés sont enregistrées dans les paramètres locaux de ton compte Windows (elles ne sont pas envoyées sur GitHub, mais cette configuration n'est pas un coffre chiffré). Ne partage jamais ces valeurs. Deezer utilise ici sa recherche publique.")
+        note.setWordWrap(True)
+        layout.addWidget(note)
+        form = QFormLayout()
+        spotify_id = QLineEdit(str(self.settings.value("music/spotify_client_id", "")))
+        spotify_secret = QLineEdit(str(self.settings.value("music/spotify_client_secret", "")))
+        spotify_secret.setEchoMode(QLineEdit.EchoMode.Password)
+        apple_token = QLineEdit(str(self.settings.value("music/apple_developer_token", "")))
+        apple_token.setEchoMode(QLineEdit.EchoMode.Password)
+        youtube_key = QLineEdit(str(self.settings.value("music/youtube_api_key", "")))
+        youtube_key.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("Spotify — Client ID", spotify_id)
+        form.addRow("Spotify — Client Secret", spotify_secret)
+        form.addRow("Apple Music — Developer Token", apple_token)
+        form.addRow("YouTube Data API — API Key", youtube_key)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.settings.setValue("music/spotify_client_id", spotify_id.text().strip())
+            self.settings.setValue("music/spotify_client_secret", spotify_secret.text().strip())
+            self.settings.setValue("music/apple_developer_token", apple_token.text().strip())
+            self.settings.setValue("music/youtube_api_key", youtube_key.text().strip())
+            self.status.setText("Configuration des plateformes enregistrée localement.")
+
+    @staticmethod
+    def _url_with_query(base_url: str, params: dict[str, str]) -> QUrl:
+        url = QUrl(base_url)
+        query = QUrlQuery()
+        for key, value in params.items():
+            query.addQueryItem(key, value)
+        url.setQuery(query)
+        return url
+
+    def _request_json(self, url: QUrl, callback, headers: dict[str, str] | None = None,
+                      body: bytes | None = None) -> None:
+        request = QNetworkRequest(url)
+        request.setRawHeader(QByteArray(b"Accept"), QByteArray(b"application/json"))
+        for key, value in (headers or {}).items():
+            request.setRawHeader(QByteArray(key.encode()), QByteArray(value.encode()))
+        if body is None:
+            reply = self.network.get(request)
+        else:
+            request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader,
+                              "application/x-www-form-urlencoded")
+            reply = self.network.post(request, QByteArray(body))
+        reply.finished.connect(lambda r=reply, cb=callback: self._finish_json_request(r, cb))
+
+    def _finish_json_request(self, reply, callback) -> None:
+        error = reply.error()
+        raw = bytes(reply.readAll())
+        error_text = reply.errorString()
+        reply.deleteLater()
+        if error:
+            self.status.setText(f"Erreur de connexion à la plateforme : {error_text}")
+            return
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.status.setText("La plateforme a renvoyé une réponse illisible.")
+            return
+        callback(payload)
+
+    def _search_platform(self) -> None:
+        query = self.platform_query.text().strip()
+        if not query:
+            self.status.setText("Saisis un titre ou un artiste à rechercher.")
+            return
+        platform = self.platform_combo.currentText()
+        self.music_results.clear()
+        self.status.setText(f"Recherche dans le catalogue {platform}…")
+        if platform == "Deezer":
+            url = self._url_with_query("https://api.deezer.com/search", {"q": query, "limit": "25"})
+            self._request_json(url, lambda data: self._show_platform_results("Deezer", data))
+        elif platform == "Spotify":
+            client_id = str(self.settings.value("music/spotify_client_id", "")).strip()
+            secret = str(self.settings.value("music/spotify_client_secret", "")).strip()
+            if not client_id or not secret:
+                self.status.setText("Configure le Client ID et le Client Secret Spotify dans « Configurer les API ».")
+                return
+            credentials = base64.b64encode(f"{client_id}:{secret}".encode()).decode()
+            self._request_json(QUrl("https://accounts.spotify.com/api/token"),
+                lambda data: self._spotify_token_received(data, query),
+                {"Authorization": f"Basic {credentials}"}, b"grant_type=client_credentials")
+        elif platform == "Apple Music":
+            token = str(self.settings.value("music/apple_developer_token", "")).strip()
+            if not token:
+                self.status.setText("Ajoute un Apple Music Developer Token dans « Configurer les API ».")
+                return
+            url = self._url_with_query("https://api.music.apple.com/v1/catalog/fr/search",
+                                       {"term": query, "types": "songs", "limit": "25"})
+            self._request_json(url, lambda data: self._show_platform_results("Apple Music", data),
+                               {"Authorization": f"Bearer {token}"})
+        else:
+            key = str(self.settings.value("music/youtube_api_key", "")).strip()
+            if not key:
+                self.status.setText("Ajoute une clé YouTube Data API dans « Configurer les API ».")
+                return
+            url = self._url_with_query("https://www.googleapis.com/youtube/v3/search",
+                {"part": "snippet", "type": "video", "videoCategoryId": "10",
+                 "maxResults": "25", "q": query, "key": key})
+            self._request_json(url, lambda data: self._show_platform_results("YouTube Music", data))
+
+    def _spotify_token_received(self, payload: dict, query: str) -> None:
+        token = payload.get("access_token")
+        if not token:
+            self.status.setText("Spotify n'a pas fourni de jeton. Vérifie les identifiants API.")
+            return
+        url = self._url_with_query("https://api.spotify.com/v1/search",
+                                   {"q": query, "type": "track", "limit": "25"})
+        self._request_json(url, lambda data: self._show_platform_results("Spotify", data),
+                           {"Authorization": f"Bearer {token}"})
+
+    def _show_platform_results(self, platform: str, payload: dict) -> None:
+        if payload.get("error"):
+            error = payload["error"]
+            if isinstance(error, dict):
+                error = error.get("message", str(error))
+            self.status.setText(f"{platform} : {error}")
+            return
+        if platform == "Deezer":
+            records = payload.get("data", [])
+            parsed = [(f'{item.get("title", "Titre inconnu")} — {item.get("artist", {}).get("name", "Artiste inconnu")}', item.get("link", "")) for item in records]
+        elif platform == "Spotify":
+            records = payload.get("tracks", {}).get("items", [])
+            parsed = [(f'{item.get("name", "Titre inconnu")} — {", ".join(a.get("name", "") for a in item.get("artists", []))}', item.get("external_urls", {}).get("spotify", "")) for item in records]
+        elif platform == "Apple Music":
+            records = payload.get("results", {}).get("songs", {}).get("data", [])
+            parsed = [(f'{item.get("attributes", {}).get("name", "Titre inconnu")} — {item.get("attributes", {}).get("artistName", "Artiste inconnu")}', item.get("attributes", {}).get("url", "")) for item in records]
+        else:
+            records = payload.get("items", [])
+            parsed = [(f'{item.get("snippet", {}).get("title", "Titre inconnu")} — {item.get("snippet", {}).get("channelTitle", "Chaîne inconnue")}', f'https://music.youtube.com/watch?v={item.get("id", {}).get("videoId", "")}') for item in records]
+        count = 0
+        for title, url in parsed:
+            if not url:
+                continue
+            item = QListWidgetItem(title)
+            item.setData(Qt.ItemDataRole.UserRole, url)
+            self.music_results.addItem(item)
+            count += 1
+        self.status.setText(f"{count} résultat(s) trouvé(s) sur {platform}. Double-clique un résultat pour l'ouvrir." if count else f"Aucun résultat exploitable trouvé sur {platform}.")
+
+    def _open_platform_result(self, *_args: object) -> None:
+        item = self.music_results.currentItem()
+        if not item:
+            self.status.setText("Sélectionne d'abord un résultat de plateforme.")
+            return
+        url = item.data(Qt.ItemDataRole.UserRole)
+        if url:
+            QDesktopServices.openUrl(QUrl(url))
 
     def _install_shortcuts(self) -> None:
         for sequence, callback in (
