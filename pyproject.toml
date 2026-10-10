@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mixmind-ai"
+version = "0.1.0"
+description = "Open-source Windows DJ assistant with local and optional remote AI"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { file = "LICENSE" }
+authors = [{ name = "MixMind AI contributors" }]
+dependencies = ["PySide6>=6.7,<7"]
+
+[project.optional-dependencies]
+analysis = ["librosa>=0.10.2", "soundfile>=0.12.1"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.scripts]
+mixmind = "mixmind.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
