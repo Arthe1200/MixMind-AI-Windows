@@ -334,9 +334,14 @@ class MainWindow(QMainWindow):
         self.music_results.setObjectName("musicResults")
         self.music_results.itemDoubleClicked.connect(self._open_platform_result)
         platforms_layout.addWidget(self.music_results, 1)
-        open_result_button = QPushButton("Ouvrir le titre sélectionné sur la plateforme")
+        platform_actions = QHBoxLayout()
+        open_result_button = QPushButton("Ouvrir le titre sélectionné")
         open_result_button.clicked.connect(self._open_platform_result)
-        platforms_layout.addWidget(open_result_button)
+        browser_search_button = QPushButton("Recherche sur le site (sans clé API)")
+        browser_search_button.clicked.connect(self._open_platform_search)
+        platform_actions.addWidget(open_result_button)
+        platform_actions.addWidget(browser_search_button)
+        platforms_layout.addLayout(platform_actions)
         self.library_tabs.addTab(platforms_tab, "Plateformes")
         library_layout.addWidget(self.library_tabs)
 
@@ -541,6 +546,23 @@ class MainWindow(QMainWindow):
             self.music_results.addItem(item)
             count += 1
         self.status.setText(f"{count} résultat(s) trouvé(s) sur {platform}. Double-clique un résultat pour l'ouvrir." if count else f"Aucun résultat exploitable trouvé sur {platform}.")
+
+    def _open_platform_search(self) -> None:
+        query = self.platform_query.text().strip()
+        if not query:
+            self.status.setText("Saisis un titre ou un artiste à rechercher.")
+            return
+        platform = self.platform_combo.currentText()
+        if platform == "Deezer":
+            url = self._url_with_query("https://www.deezer.com/search", {"q": query})
+        elif platform == "Spotify":
+            url = QUrl("https://open.spotify.com/search/" + QUrl.toPercentEncoding(query).data().decode())
+        elif platform == "Apple Music":
+            url = self._url_with_query("https://music.apple.com/fr/search", {"term": query})
+        else:
+            url = self._url_with_query("https://music.youtube.com/search", {"q": query})
+        QDesktopServices.openUrl(url)
+        self.status.setText(f"Recherche {platform} ouverte dans le navigateur.")
 
     def _open_platform_result(self, *_args: object) -> None:
         item = self.music_results.currentItem()
