@@ -17,6 +17,19 @@ MixMind AI vise une application de bureau Windows, et non un simple site web. À
 
 Les intégrations Spotify, Apple Music, Deezer et YouTube dépendront des API officielles, des conditions de service et des droits applicables. Un abonnement musical ne donne pas automatiquement accès aux fichiers audio bruts.
 
+## Fonctionnalités déjà présentes dans l'interface
+
+- Importer plusieurs fichiers audio locaux ou scanner un dossier et ses sous-dossiers.
+- Rechercher rapidement un titre dans la bibliothèque de la session.
+- Préécouter un morceau, mettre en pause, arrêter et régler le volume.
+- Barre de progression avec durée écoulée/totale et déplacement dans le morceau.
+- Navigation précédent/suivant, lecture aléatoire et répétition.
+- Retirer un titre de la liste sans supprimer le fichier audio d'origine.
+- Raccourcis clavier : `Espace` lecture/pause, `Ctrl+O` import, `Ctrl+F` recherche, `Suppr` retirer, `Alt+←/→` précédent/suivant.
+- Mémoriser le volume et la taille/position de la fenêtre entre les lancements.
+
+Ces commandes améliorent la bibliothèque et la préécoute, mais ne constituent pas encore un mixeur DJ à deux platines. Le BPM automatique, les formes d'onde, les effets, le crossfader et l'export de remixes restent à développer.
+
 ## Principes
 
 - **Local d'abord :** les fichiers audio et la bibliothèque restent sur le PC, sauf action explicite de l'utilisateur.
