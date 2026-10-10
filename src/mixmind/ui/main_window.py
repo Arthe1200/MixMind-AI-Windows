@@ -14,8 +14,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFormLayout,
-    QTabWidget,
     QDoubleSpinBox,
     QFileDialog,
     QFrame,
@@ -28,6 +26,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSlider,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -194,7 +193,7 @@ class DeckPanel(QFrame):
     def _player_error(self, *_args: object) -> None:
         self.track_label.setText(f"Erreur audio : {self.player.errorString()}")
 
-    def parent_window(self) -> "MainWindow":
+    def parent_window(self) -> MainWindow:
         parent = self.parent()
         while parent is not None and not isinstance(parent, MainWindow):
             parent = parent.parent()

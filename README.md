@@ -63,6 +63,15 @@ Les clés sont conservées dans les paramètres locaux de l'utilisateur Windows 
 - **Licences propres :** vérifier la licence des dépendances, modèles, jeux de données et fichiers audio.
 - **Qualité audio :** le traitement temps réel doit rester indépendant des appels réseau et des tâches IA lentes.
 
+## Fondations techniques ajoutées
+
+- core/audio/mixer.py : calculs testés de crossfader à puissance égale et gains par canal/master. Ce module calcule les niveaux mais ne constitue pas à lui seul un moteur de mixage de buffers audio.
+- core/hardware/midi.py : profils MIDI JSON, validation des messages, associations bouton/action et dispatcher testable sans matériel. Dépendances matérielles optionnelles via pip install -e ".[hardware]".
+- core/analysis/analyzer.py : estimation BPM et résumé de forme d'onde via les dépendances optionnelles d'analyse. L'analyse doit tourner en tâche de fond ; les BPM restent des estimations.
+- Tests unitaires du crossfader, des gains et des profils MIDI.
+
+Ces modules sont des fondations réelles, mais le moteur DSP temps réel, la détection matérielle, tous les effets, les stems IA et les connexions OAuth ne sont pas encore intégrés à l'interface.
+
 ## Architecture prévue
 
 - `app/` : lancement et interface PySide6.
