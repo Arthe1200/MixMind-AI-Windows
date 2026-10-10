@@ -17,6 +17,17 @@ MixMind AI vise une application de bureau Windows, et non un simple site web. À
 
 Les intégrations Spotify, Apple Music, Deezer et YouTube dépendront des API officielles, des conditions de service et des droits applicables. Un abonnement musical ne donne pas automatiquement accès aux fichiers audio bruts.
 
+## Fonctionnalités de la workstation DJ
+
+- **Deux platines indépendantes A/B** : charger et lire deux fichiers locaux simultanément, avec pause, stop, cue au début et barre de position/durée pour chaque platine.
+- **Crossfader audio réel** à courbe de puissance égale, avec niveau master et gain indépendant par platine.
+- **Pitch / vitesse** réglable par platine. La vitesse et la hauteur changent ensemble dans cette première implémentation.
+- **Synchronisation BPM manuelle** : saisir les BPM connus de A et B, puis synchroniser la vitesse de B. Il ne s'agit pas encore d'une détection BPM automatique ni d'une synchronisation de phase.
+- Bibliothèque locale avec import multiple, scan récursif de dossier, recherche et retrait sans supprimer les fichiers d'origine.
+- Raccourcis : `Ctrl+O` importer, `Ctrl+F` rechercher, `Ctrl+1` charger sur A, `Ctrl+2` charger sur B, `Espace` commande de lecture rapide.
+
+**Limites actuelles :** ce socle permet de lire deux pistes et de les fondre réellement, mais il ne dispose pas encore de formes d'onde, de détection automatique BPM/tonalité, d'EQ/filtre DSP, de préécoute casque indépendante, de boucles/hot cues ni d'export de remix. Ces éléments nécessitent des composants audio dédiés et seront ajoutés ensuite.
+
 ## Fonctionnalités déjà présentes dans l'interface
 
 - Importer plusieurs fichiers audio locaux ou scanner un dossier et ses sous-dossiers.
