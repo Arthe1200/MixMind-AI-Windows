@@ -15,7 +15,7 @@ MixMind AI vise une application de bureau Windows, et non un simple site web. À
 - choisir entre des fonctions IA locales et un fournisseur distant facultatif (Grok) ;
 - conserver la bibliothèque et les projets sur le PC.
 
-Les intégrations Spotify, Apple Music, Deezer et YouTube dépendront des API officielles, des conditions de service et des droits applicables. Un abonnement musical ne donne pas automatiquement accès aux fichiers audio bruts.
+**Intégrations catalogue présentes dans l'application :** Deezer (recherche publique), Spotify (recherche API avec Client ID/Secret), Apple Music (catalogue avec Developer Token) et YouTube Music (recherche via YouTube Data API). Les résultats s'ouvrent sur la plateforme officielle. Les clés API ne sont pas incluses dans le dépôt. Un abonnement musical ne donne pas automatiquement accès aux fichiers audio bruts.
 
 ## Fonctionnalités de la workstation DJ
 
@@ -40,6 +40,19 @@ Les intégrations Spotify, Apple Music, Deezer et YouTube dépendront des API of
 - Mémoriser le volume et la taille/position de la fenêtre entre les lancements.
 
 Ces commandes améliorent la bibliothèque et la préécoute, mais ne constituent pas encore un mixeur DJ à deux platines. Le BPM automatique, les formes d'onde, les effets, le crossfader et l'export de remixes restent à développer.
+
+## Plateformes musicales
+
+Dans l'application, ouvre l'onglet **Plateformes**, choisis Deezer, Spotify, Apple Music ou YouTube Music, puis lance une recherche. Double-clique un résultat pour ouvrir le titre dans le service officiel.
+
+- **Deezer :** la recherche publique est utilisée sans clé configurée.
+- **Spotify :** crée une application sur le [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), puis saisis le Client ID et le Client Secret dans « Configurer les API ».
+- **Apple Music :** un Apple Music Developer Token valide est nécessaire pour interroger le catalogue.
+- **YouTube Music :** active YouTube Data API v3 dans un projet Google Cloud et saisis la clé API dans « Configurer les API ».
+
+Les clés sont conservées dans les paramètres locaux de l'utilisateur Windows et **ne sont pas chiffrées par l'application** : ne partage pas ton compte Windows ni ses paramètres. Ne committe jamais de clés dans GitHub.
+
+**Limite volontaire :** ces intégrations recherchent le catalogue et ouvrent les pages officielles ; elles ne déverrouillent pas les flux audio protégés et ne chargent pas automatiquement les morceaux en platine. Pour mixer, importe des fichiers audio locaux que tu es autorisé à utiliser. Les accès API peuvent être soumis à l'éligibilité développeur, quotas, changements de politique ou validation par les plateformes.
 
 ## Principes
 
