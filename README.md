@@ -43,7 +43,7 @@ Ces commandes améliorent la bibliothèque et la préécoute, mais ne constituen
 
 ## Plateformes musicales
 
-Dans l'application, ouvre l'onglet **Plateformes**, choisis Deezer, Spotify, Apple Music ou YouTube Music, puis lance une recherche. Double-clique un résultat pour ouvrir le titre dans le service officiel.
+Dans l'application, ouvre l'onglet **Plateformes**, choisis Deezer, Spotify, Apple Music ou YouTube Music, puis lance une recherche. Double-clique un résultat pour ouvrir le titre dans le service officiel. Le bouton **Recherche sur le site (sans clé API)** ouvre aussi directement la recherche officielle si tu ne veux pas configurer les API.
 
 - **Deezer :** la recherche publique est utilisée sans clé configurée.
 - **Spotify :** crée une application sur le [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), puis saisis le Client ID et le Client Secret dans « Configurer les API ».
